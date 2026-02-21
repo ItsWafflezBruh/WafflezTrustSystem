@@ -1,31 +1,3 @@
--- Detect entering vehicle
-CreateThread(function()
-    while true do
-        Wait(250)
-
-        local ped = PlayerPedId()
-        local veh = GetVehiclePedIsTryingToEnter(ped)
-
-        if veh ~= 0 then
-            local model = GetEntityModel(veh)
-            local spawncode = GetDisplayNameFromVehicleModel(model)
-
-            TriggerServerEvent('veh:checkAccess', spawncode)
-        end
-    end
-end)
-
--- Deny access
-RegisterNetEvent('veh:deny', function()
-    local ped = PlayerPedId()
-    ClearPedTasksImmediately(ped)
-
-    lib.notify({
-        title = 'Vehicle Access',
-        description = 'You do not have access to this vehicle',
-        type = 'error'
-    })
-end)
 
 -- Gets Current spawn code
 local function getCurrentSpawncode()
@@ -143,4 +115,56 @@ end)
 
 RegisterCommand('vehadmin', function()
     lib.showContext('vehicle_admin_menu')
+end)
+
+-- Checks whos driving
+local lastVehicle = nil
+
+CreateThread(function()
+    while true do
+        Wait(200)
+
+        local ped = PlayerPedId()
+        local veh = GetVehiclePedIsIn(ped, false)
+
+        -- Not in a vehicle
+        if veh == 0 then
+            lastVehicle = nil
+            goto continue
+        end
+
+        -- Only check DRIVER seat
+        if GetPedInVehicleSeat(veh, -1) ~= ped then
+            goto continue
+        end
+
+        -- Prevent duplicate checks for same vehicle
+        if veh == lastVehicle then
+            goto continue
+        end
+
+        lastVehicle = veh
+
+        local model = GetEntityModel(veh)
+        local spawncode = GetDisplayNameFromVehicleModel(model):lower()
+
+        TriggerServerEvent('veh:checkDriverAccess', spawncode)
+        ::continue::
+    end
+end)
+
+-- Kick driver out
+RegisterNetEvent('veh:kickDriver', function()
+    local ped = PlayerPedId()
+    local veh = GetVehiclePedIsIn(ped, false)
+
+    if veh ~= 0 then
+        TaskLeaveVehicle(ped, veh, 0)
+    end
+
+    lib.notify({
+        title = 'Vehicle Access',
+        description = 'You do not own or have access to this vehicle',
+        type = 'error'
+    })
 end)
