@@ -161,8 +161,8 @@ lib.callback.register('veh:transferOwnership', function(src, spawncode, targetId
     return true
 end)
 
--- Check Driver
-RegisterNetEvent('veh:checkAccess', function(spawncode)
+-- Checks access
+RegisterNetEvent('veh:checkDriverAccess', function(spawncode)
     local src = source
     spawncode = spawncode:lower()
 
@@ -172,10 +172,14 @@ RegisterNetEvent('veh:checkAccess', function(spawncode)
     local ownerIdentifier = getIdentifier(src, Config.OwnerIdentifier)
     local license = getIdentifier(src, 'license')
 
+    -- Owner always allowed
     if data.owner == ownerIdentifier then return end
+
+    -- Granted access allowed
     if data.access[license] then return end
 
-    TriggerClientEvent('veh:deny', src)
+    -- Not allowed → kick
+    TriggerClientEvent('veh:kickDriver', src)
 end)
 
 -- Revoke keys
